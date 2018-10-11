@@ -1,11 +1,8 @@
 from copy import copy
-
 from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
-
 import GetData
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-import numpy as np
 import pandas as pd
 
 
@@ -31,7 +28,6 @@ if __name__ == "__main__":
 
     games_list, teams_list = GetData.returnTeams()
     games_list = list(map(lambda x : x[1::],games_list))
-    prettyPrinted = []
 
     rawScore = []
     for row in games_list:
@@ -50,17 +46,6 @@ if __name__ == "__main__":
         newRow.append(score)
         rawScore.append(newRow)
     games_list = rawScore
-
-
-
-    # for row in games_list:
-    #     row = copy(row)
-    #     row[1] = teams_list[row[1]]
-    #     row[1] = teams_list[row[4]]
-    #
-    #
-    #     prettyPrinted.append(row)
-
     games_reversed = []
     for row in games_list:
         newRow = copy(row)
@@ -70,11 +55,10 @@ if __name__ == "__main__":
         games_reversed.append(newRow)
 
 
+    games_total = games_list + games_reversed
 
     enc = OneHotEncoder(categorical_features=[1,3])
 
-
-    games_total = games_list+games_reversed
     games = pd.DataFrame(games_total,columns=['Useless','TeamA','SiteA','TeamB','SiteB','ScoreDiff'])
     standardScaler = StandardScaler()
     games[['ScoreDiff']] = standardScaler.fit_transform(games[['ScoreDiff']].values)
@@ -82,14 +66,7 @@ if __name__ == "__main__":
     games_x = games.iloc[:,:-1]
     games_y = games.iloc[:,-1]
     new_features = enc.fit_transform(games_x).toarray()
-    # newTest = enc.transform(games_x.iloc[0:1,:])
-    # newTest = games_x.iloc[0:1,:]
-    # print(enc.fit_transform(games_total).toarray())
-    learner =Pipeline([('Scale', StandardScaler(with_mean=False)),
-                                           ('MLP', MLPRegressor(max_iter=1000))])
-    # learner =Pipeline([('Scale', StandardScaler(with_mean=False)),
-    #                                        ('MLP', MLPRegressor(max_iter=2000,activation='relu'))])
-
+    learner =Pipeline([('MLP', MLPRegressor(max_iter=1000))])
     gs = ms.GridSearchCV(learner, params_mlp, cv=3, n_jobs=4,
                          verbose=10, scoring=None, refit='neg_mean_squared_error',
                          return_train_score=True)
@@ -110,20 +87,14 @@ if __name__ == "__main__":
                 continue
             #Home
             simulations.append([0,teamId,2.0,awayId,0.0])
-            # simulations.append([20180918,awayId,0.0,awayId,2.0])
             #neutral
             simulations.append([0, teamId, 1.0, awayId, 1.0])
-            # simulations.append([20180918, awayId, 1.0, awayId, 1.0])
             #away
             simulations.append([0, teamId, 0.0, awayId, 2.0])
-            # simulations.append([20180918, awayId, 2.0, awayId, 0.0])
 
         simulations = pd.DataFrame(simulations)
         t = enc.transform(simulations).toarray()
         predictions = estimator.predict(t)
-
-        # predictions[predictions > 0] = 1
-        # predictions[predictions < 0] = -1
 
         teamResults[teamId] = predictions.sum()
     teamCleanResults = []
@@ -183,7 +154,7 @@ if __name__ == "__main__":
     sortedRankings.reverse()
 
     i = 0
-    for s in sortedRankings[0:50]:
+    for s in sortedRankings[0:25]:
         i += 1
         print("{} {}".format(i, s))
 
